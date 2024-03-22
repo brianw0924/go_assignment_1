@@ -67,6 +67,8 @@ func (s *Student) calcAnswer(q *Question) *Answer {
 }
 
 func (s *Student) QuestionDone(winner string) {
-	fmt.Printf("Student %s: %s, you win.\n", s.Name, winner)
-	s.Done <- struct{}{}
+	if winner != s.Name {
+		fmt.Printf("Student %s: %s, you win.\n", s.Name, winner)
+		s.Done <- struct{}{}
+	}
 }

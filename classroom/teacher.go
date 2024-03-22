@@ -31,9 +31,7 @@ func (t *Teacher) QuestionReady() {
 
 func (t *Teacher) QuestionDone(winner string) {
 	for _, s := range t.StudentList {
-		if s.Name != winner {
-			s.QuestionDone(winner)
-		}
+		s.QuestionDone(winner)
 	}
 }
 

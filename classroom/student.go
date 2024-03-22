@@ -7,16 +7,18 @@ import (
 )
 
 type Student struct {
-	Name  string
-	Ready chan struct{}
-	Done  chan struct{}
+	Name     string
+	Ready    chan struct{}
+	Done     chan struct{}
+	Answered bool
 }
 
 func NewStudent(name string) *Student {
 	return &Student{
-		Name:  name,
-		Ready: make(chan struct{}, 1),
-		Done:  make(chan struct{}, 1),
+		Name:     name,
+		Ready:    make(chan struct{}, 1),
+		Done:     make(chan struct{}, 1),
+		Answered: false,
 	}
 }
 
@@ -41,17 +43,22 @@ func (s *Student) SeeAndThink() {
 }
 
 func (s *Student) AnswerQuestion(question chan *Question, answer chan *Answer) {
-	select {
-	case q := <-question:
-		ans := s.calcAnswer(q)
-		fmt.Printf("Student %s: %d %c %d = %d\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
-		answer <- ans
-	default:
-		<-s.Done
+	for {
+		select {
+		case q := <-question:
+			s.Answered = true
+			ans := s.CalcAnswer(q)
+			ans.val += rand.Intn(5) - 2
+			fmt.Printf("Student %s: %d %c %d = %d\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
+			answer <- ans
+			return
+		case <-s.Done:
+			return
+		}
 	}
 }
 
-func (s *Student) calcAnswer(q *Question) *Answer {
+func (s *Student) CalcAnswer(q *Question) *Answer {
 	switch q.Operator {
 	case '+':
 		return NewAnswer(s.Name, q.LeftOperand+q.RightOperand)
@@ -67,6 +74,13 @@ func (s *Student) calcAnswer(q *Question) *Answer {
 }
 
 func (s *Student) QuestionDone(winner string) {
-	fmt.Printf("Student %s: %s, you win.\n", s.Name, winner)
-	s.Done <- struct{}{}
+	if winner != s.Name && winner != "" {
+		fmt.Printf("Student %s: %s, you win.\n", s.Name, winner)
+	}
+
+	if s.Answered {
+		s.Answered = false
+	} else {
+		s.Done <- struct{}{}
+	}
 }

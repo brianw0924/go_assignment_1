@@ -49,7 +49,7 @@ func (s *Student) AnswerQuestion(question chan *Question, answer chan *Answer) {
 			s.Answered = true
 			ans := s.CalcAnswer(q)
 			ans.val += rand.Intn(5) - 2
-			fmt.Printf("Student %s: %d %c %d = %d\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
+			fmt.Printf("Student %s: %d %c %d = %d!\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
 			answer <- ans
 			return
 		case <-s.Done:

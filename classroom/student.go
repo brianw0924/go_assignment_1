@@ -44,7 +44,7 @@ func (s *Student) AnswerQuestion(question chan *Question, answer chan *Answer) {
 	select {
 	case q := <-question:
 		ans := s.calcAnswer(q)
-		fmt.Printf("Student %s: %d %c %d = %d\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
+		fmt.Printf("Student %s: %d %c %d = %d!\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
 		answer <- ans
 	default:
 		<-s.Done

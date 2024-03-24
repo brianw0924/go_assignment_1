@@ -6,16 +6,12 @@ import (
 )
 
 type Teacher struct {
-	StudentList  []*Student
-	QuestionChan chan *Question
-	AnswerChan   chan *Answer
+	StudentList []*Student
 }
 
 func NewTeacher() *Teacher {
 	return &Teacher{
-		StudentList:  make([]*Student, 0),
-		QuestionChan: make(chan *Question, 1),
-		AnswerChan:   make(chan *Answer, 1),
+		StudentList: make([]*Student, 0),
 	}
 }
 
@@ -23,26 +19,36 @@ func (t *Teacher) Register(s *Student) {
 	t.StudentList = append(t.StudentList, s)
 }
 
-func (t *Teacher) QuestionReady() {
+func (t *Teacher) QuestionReady(question <-chan *Question, answer chan<- *Answer, winner <-chan *Answer) {
 	for _, s := range t.StudentList {
-		s.QuestionReady()
+		go s.QuestionReady(question, answer, winner)
 	}
 }
 
-func (t *Teacher) QuestionDone(winner string) {
-	for _, s := range t.StudentList {
-		s.QuestionDone(winner)
+func (t *Teacher) QuestionDone(winner chan<- *Answer, ans *Answer) {
+	for i := 0; i < len(t.StudentList); i += 1 {
+		winner <- ans
 	}
 }
 
 func (t *Teacher) Start() {
+	t.WarmUp()
+	qid := 0
 	for {
-		t.WarmUp()
-		t.AskQuestion()
-		t.QuestionReady()
-		winner := t.WaitAnswer()
-		t.QuestionDone(winner)
+		time.Sleep(time.Second * 1)
 
+		go func() {
+			question := make(chan *Question, 1)
+			answer := make(chan *Answer, 1)
+			winner := make(chan *Answer, len(t.StudentList))
+
+			t.AskQuestion(qid, question)
+			t.QuestionReady(question, answer, winner)
+			ans := t.WaitAnswer(answer)
+			t.QuestionDone(winner, ans)
+		}()
+
+		qid += 1
 	}
 }
 
@@ -51,14 +57,14 @@ func (t *Teacher) WarmUp() {
 	time.Sleep(time.Second * 3)
 }
 
-func (t *Teacher) AskQuestion() {
-	q := NewQuestion()
-	fmt.Printf("Teacher: %d %c %d = ?\n", q.LeftOperand, q.Operator, q.RightOperand)
-	t.QuestionChan <- q
+func (t *Teacher) AskQuestion(qid int, question chan<- *Question) {
+	q := NewQuestion(qid)
+	fmt.Printf("Teacher: Q%d: %d %c %d = ?\n", q.Id, q.LeftOperand, q.Operator, q.RightOperand)
+	question <- q
+	close(question)
 }
-func (t *Teacher) WaitAnswer() (winner string) {
-	ans := <-t.AnswerChan
-	winner = ans.fromStudent
-	fmt.Printf("Teacher: %s, you are right!\n", winner)
-	return winner
+func (t *Teacher) WaitAnswer(answer <-chan *Answer) *Answer {
+	ans := <-answer
+	fmt.Printf("Teacher: %s, Q%d you are right!\n", ans.fromStudent, ans.QuestionId)
+	return ans
 }

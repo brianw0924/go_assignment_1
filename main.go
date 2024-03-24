@@ -15,7 +15,6 @@ func main() {
 
 	for _, s := range studentList {
 		teacher.Register(s)
-		go s.Start(teacher.QuestionChan, teacher.AnswerChan)
 	}
 
 	go teacher.Start()

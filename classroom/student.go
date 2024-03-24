@@ -7,68 +7,50 @@ import (
 )
 
 type Student struct {
-	Name  string
-	Ready chan struct{}
-	Done  chan struct{}
+	Name string
 }
 
 func NewStudent(name string) *Student {
 	return &Student{
-		Name:  name,
-		Ready: make(chan struct{}, 1),
-		Done:  make(chan struct{}, 1),
+		Name: name,
 	}
 }
 
-func (s *Student) Start(question chan *Question, answer chan *Answer) {
-	for {
-		s.WaitQuestion()
-		s.SeeAndThink()
-		s.AnswerQuestion(question, answer)
-	}
+func (s *Student) QuestionReady(question <-chan *Question, answer chan<- *Answer, winner <-chan *Answer) {
+	s.SeeAndThink()
+	go s.AnswerQuestion(question, answer)
+	go s.WaitWinner(winner)
 }
 
-func (s *Student) WaitQuestion() {
-	<-s.Ready
-}
-
-func (s *Student) QuestionReady() {
-	s.Ready <- struct{}{}
+func (s *Student) WaitWinner(winner <-chan *Answer) {
+	ans := <-winner
+	fmt.Printf("Student %s: %s, Q%d you win.\n", s.Name, ans.fromStudent, ans.QuestionId)
 }
 
 func (s *Student) SeeAndThink() {
-	time.Sleep(time.Millisecond * time.Duration(1000+rand.Intn(2001)))
+	time.Sleep(time.Millisecond * time.Duration(1000+rand.Intn(5001)))
 }
 
-func (s *Student) AnswerQuestion(question chan *Question, answer chan *Answer) {
-	select {
-	case q := <-question:
+func (s *Student) AnswerQuestion(question <-chan *Question, answer chan<- *Answer) {
+	if q, ok := <-question; ok {
 		ans := s.calcAnswer(q)
-		fmt.Printf("Student %s: %d %c %d = %d!\n", s.Name, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
+		fmt.Printf("Student %s: Q%d: %d %c %d = %d!\n", s.Name, q.Id, q.LeftOperand, q.Operator, q.RightOperand, ans.val)
 		answer <- ans
-	default:
-		<-s.Done
+		close(answer)
 	}
 }
 
 func (s *Student) calcAnswer(q *Question) *Answer {
 	switch q.Operator {
 	case '+':
-		return NewAnswer(s.Name, q.LeftOperand+q.RightOperand)
+		return NewAnswer(s.Name, q.LeftOperand+q.RightOperand, q.Id)
 	case '-':
-		return NewAnswer(s.Name, q.LeftOperand-q.RightOperand)
+		return NewAnswer(s.Name, q.LeftOperand-q.RightOperand, q.Id)
 	case '*':
-		return NewAnswer(s.Name, q.LeftOperand*q.RightOperand)
+		return NewAnswer(s.Name, q.LeftOperand*q.RightOperand, q.Id)
 	case '/':
-		return NewAnswer(s.Name, q.LeftOperand/q.RightOperand)
+		return NewAnswer(s.Name, q.LeftOperand/q.RightOperand, q.Id)
 	default:
 		panic(fmt.Sprintf("Invalid operator: %c", q.Operator))
-	}
-}
-
-func (s *Student) QuestionDone(winner string) {
-	if winner != s.Name {
-		fmt.Printf("Student %s: %s, you win.\n", s.Name, winner)
-		s.Done <- struct{}{}
 	}
 }

@@ -29,6 +29,7 @@ func (t *Teacher) QuestionDone(winner chan<- *Answer, ans *Answer) {
 	for i := 0; i < len(t.StudentList); i += 1 {
 		winner <- ans
 	}
+	close(winner)
 }
 
 func (t *Teacher) Start() {

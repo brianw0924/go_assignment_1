@@ -8,7 +8,7 @@ go run main.go
 git checkout bonus-i
 go run main.go
 ```
-### Bonus e-i
+### Bonus e-ii
 ```
 git checkout bonus-ii
 go run main.go
